@@ -2,20 +2,11 @@ package trtlshell
 
 import (
 	"fmt"
-  "sort"
 	"strings"
 
 	"github.com/velour/catbase/bot"
 	"github.com/velour/catbase/bot/msg"
-	// "github.com/velour/catbase/bot/user"
 )
-
-type directory struct {
-  name string
-  parent *directory
-  childDirectories map[string]*directory
-  files map[string]string
-}
 
 type active struct {
   name string
@@ -62,7 +53,9 @@ func (p *TrtlShellPlugin) Message(message msg.Message) bool {
         response, listenToMe = p.getPresentWorkingDirectory(user)
       } else if tokens[0] == "cd" {
         response, listenToMe = p.changeDirectory(user, tokens)
-      } else if tokens[0] == "mkdir" {
+      } else if tokens[0] == "ls" {
+        response, listenToMe = p.listDirectory(user, tokens)
+      }else if tokens[0] == "mkdir" {
         response, listenToMe = p.makeDirectory(user, tokens)
       }
     }
@@ -107,83 +100,4 @@ func (p *TrtlShellPlugin) initializeSession(username string, tokens []string) (s
 func (p *TrtlShellPlugin) terminateSession(user *active) (string, bool) {
   delete(p.activeSessions, user.name)
   return fmt.Sprintf("%s is now logged out.", user.name), true
-}
-
-func (p *TrtlShellPlugin) getPresentWorkingDirectory(user *active) (string, bool) {
-  directories := []string{}
-  for currentDirectory := user.currentDirectory; currentDirectory != &p.root; currentDirectory = currentDirectory.parent {
-    directories = append(directories, currentDirectory.name)
-  }
-  sort.Sort(sort.Reverse(sort.StringSlice(directories)))
-
-  return "/" + strings.Join(directories, "/"), true
-}
-
-func (p *TrtlShellPlugin) changeDirectory(user *active, tokens []string) (string, bool) {
-  if len(tokens) != 2 {
-    return "really? you don't know how to use cd", true
-  }
-
-  requestedDirectories := strings.Split(tokens[1], "/")
-
-  currentDirectory := user.currentDirectory
-
-  for _, requestedDirectory := range requestedDirectories {
-    if requestedDirectory == "" || requestedDirectory == "." {
-      continue
-    }
-
-    if requestedDirectory == ".." {
-      if user.currentDirectory.parent != nil {
-        currentDirectory = currentDirectory.parent
-      }
-    } else {
-      if dir, ok := currentDirectory.childDirectories[requestedDirectory]; ok {
-        currentDirectory = dir
-      } else {
-        return fmt.Sprintf("directory '%s' does not exist.", requestedDirectory), true
-      }
-    }
-  }
-
-  user.currentDirectory = currentDirectory
-
-  return "", false
-}
-
-func (p *TrtlShellPlugin) makeDirectory(user *active, tokens []string) (string, bool) {
-  if len(tokens) != 2 {
-    return "really? you don't know how to use mkdir", true
-  }
-
-  requestedDirectories := strings.Split(tokens[1], "/")
-
-  currentDirectory := user.currentDirectory
-
-  for _, requestedDirectory := range requestedDirectories {
-    
-  }
-
-  user.currentDirectory = currentDirectory
-
-  return "", false
-}
-
-func (p *TrtlShellPlugin) createUserDirectoryIfNotPresent(username string) *directory {
-  usr := createChildDirectoryIfNotPresent(&p.root, "usr")
-  return createChildDirectoryIfNotPresent(usr, username)
-}
-
-func createChildDirectoryIfNotPresent(parent *directory, newDirectoryName string) *directory {
-  if existing, ok := parent.childDirectories[newDirectoryName]; ok {
-    //hmmm this could be an error but for now we'll ignore it
-    return existing
-  }
-  parent.childDirectories[newDirectoryName] = &directory {
-    name : newDirectoryName,
-    parent : parent,
-    childDirectories : map[string]*directory{},
-    files : map[string]string{},
-  }
-  return parent.childDirectories[newDirectoryName]
 }

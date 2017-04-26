@@ -5,13 +5,9 @@ import (
 	"strings"
 )
 
-type directory struct {
-  name string
-  parent *directory
-  childDirectories map[string]*directory
-  files map[string]string
-}
-
+/*
+	PWD
+*/
 func (p *TrtlShellPlugin) getPresentWorkingDirectory(user *active) (string, bool) {
   directories := []string{}
   for currentDirectory := user.currentDirectory; currentDirectory != &p.root; currentDirectory = currentDirectory.parent {
@@ -26,9 +22,12 @@ func (p *TrtlShellPlugin) getPresentWorkingDirectory(user *active) (string, bool
   return "/" + strings.Join(directories, "/"), true
 }
 
+/*
+	CD
+*/
 func (p *TrtlShellPlugin) changeDirectory(user *active, tokens []string) (string, bool) {
   if len(tokens) != 2 {
-    return "really? you don't know how to use cd", true
+    return heckleTheUser("cd")
   }
 
 	currentDirectory := p.getDirectoryAtPath(user, tokens[1])
@@ -42,9 +41,12 @@ func (p *TrtlShellPlugin) changeDirectory(user *active, tokens []string) (string
   return "", false
 }
 
+/*
+	LS
+*/
 func (p *TrtlShellPlugin) listDirectory(user *active, tokens []string) (string, bool) {
 	if len(tokens) > 2 {
-		return "really? you don't know how to use ls", true
+		return heckleTheUser("ls")
 	}
 
 	currentDirectory := user.currentDirectory
@@ -60,39 +62,12 @@ func (p *TrtlShellPlugin) listDirectory(user *active, tokens []string) (string, 
 	return currentDirectory.getListing(), true
 }
 
-func (p *TrtlShellPlugin) getDirectoryAtPath(user *active, path string) *directory {
-	requestedDirectories := strings.Split(path, "/")
-
-	currentDirectory := user.currentDirectory
-	if path[0] == '/' {
-		currentDirectory = &p.root
-	} else if path[0] == '~' {
-		currentDirectory = p.root.createChildDirectoryIfNotPresent("home")
-	}
-
-	for _, requestedDirectory := range requestedDirectories {
-		if requestedDirectory == "" || requestedDirectory == "." {
-			continue
-		}
-
-		if requestedDirectory == ".." {
-			if currentDirectory.parent != nil {
-				currentDirectory = currentDirectory.parent
-			}
-		} else {
-			if dir, ok := currentDirectory.childDirectories[requestedDirectory]; ok {
-				currentDirectory = dir
-			} else {
-				return nil
-			}
-		}
-	}
-	return currentDirectory
-}
-
+/*
+	MKDIR
+*/
 func (p *TrtlShellPlugin) makeDirectory(user *active, tokens []string) (string, bool) {
   if len(tokens) != 2 {
-    return "really? you don't know how to use mkdir", true
+    return heckleTheUser("mkdir")
   }
 
   requestedDirectories := strings.Split(tokens[1], "/")
@@ -112,35 +87,79 @@ func (p *TrtlShellPlugin) makeDirectory(user *active, tokens []string) (string, 
   return "", false
 }
 
-func (p *TrtlShellPlugin) createUserDirectoryIfNotPresent(username string) *directory {
-  home := p.root.createChildDirectoryIfNotPresent("home")
-  return home.createChildDirectoryIfNotPresent(username)
-}
-
-func (parent *directory) createChildDirectoryIfNotPresent(newDirectoryName string) *directory {
-  if existing, ok := parent.childDirectories[newDirectoryName]; ok {
-    //hmmm this could be an error but for now we'll ignore it
-    return existing
+/*
+	TOUCH
+*/
+func (p *TrtlShellPlugin) touchFile(user *active, tokens []string) (string, bool) {
+  if len(tokens) != 2 {
+    return heckleTheUser("touch")
   }
-  parent.childDirectories[newDirectoryName] = &directory {
-    name : newDirectoryName,
-    parent : parent,
-    childDirectories : map[string]*directory{},
-    files : map[string]string{},
-  }
-  return parent.childDirectories[newDirectoryName]
-}
 
-func (dir *directory) getListing() string {
-	contents := []string{".", ".."}
+	requestedDirectories := strings.Split(tokens[1], "/")
+	currentDirectory := user.currentDirectory
 
-	for _, child := range dir.childDirectories {
-		contents = append(contents, child.name)
+	if len(requestedDirectories) > 1 {
+		allButFile := strings.Join(requestedDirectories[:len(requestedDirectories)-1], "/")
+		if tokens[1][0] == '/' {
+			allButFile = "/" + allButFile
+		}
+		currentDirectory = p.getDirectoryAtPath(user, allButFile)
 	}
 
-	for filename, _ := range dir.files {
-		contents = append(contents, filename)
+	if currentDirectory == nil {
+		return fmt.Sprintf("'%s' does not exist.", tokens[1]), true
 	}
 
-	return strings.Join(contents, "\n")
+	filename := requestedDirectories[len(requestedDirectories)-1]
+
+	if _, ok := currentDirectory.childDirectories[filename]; !ok {
+		if _, ok := currentDirectory.files[filename]; ok {
+			return fmt.Sprintf("'%s' already exists.", filename), true
+		}
+		currentDirectory.files[filename] = ""
+	}
+
+  return "", false
+}
+
+func (p *TrtlShellPlugin) catCommand(user *active, tokens []string) (string, bool) {
+	if len(tokens) < 2 {
+		return heckleTheUser("cat")
+	}
+
+	args := strings.Join(tokens[1:], " ")
+
+	if !strings.Contains(args, ">") {
+		returnString := ""
+		for _, token := range tokens[1:] {
+			value, _ := p.getFileContents(user, token)
+			returnString += value + "\n"
+		}
+		return returnString, true
+	}
+
+	split := strings.Split(args, ">")
+	inputFile := split[0]
+	value, _ := p.getFileContents(user, inputFile)
+	outputFile := split[len(split)-1]
+
+	if strings.Contains(args, ">>") {
+		return p.appendToFile(user, outputFile, value)
+	}
+	return p.truncateAndWriteFile(user, outputFile, value)
+}
+
+func (p *TrtlShellPlugin) echoCommand(user *active, tokens []string) (string, bool) {
+	args := strings.Join(tokens[1:], " ")
+	if !strings.Contains(args, ">") {
+		return strings.Trim(strings.Trim(args, " "), "\""), true
+	}
+	split := strings.Split(args, ">")
+	value := strings.Trim(strings.Trim(split[0], " "), "\"")
+	outputFile := split[len(split)-1]
+
+	if strings.Contains(args, ">>") {
+		return p.appendToFile(user, outputFile, value)
+	}
+	return p.truncateAndWriteFile(user, outputFile, value)
 }

@@ -18,6 +18,7 @@ type TrtlShellPlugin struct {
 	Bot      bot.Bot
 	root directory
   activeSessions map[string]*active
+	users map[string]bool
 }
 
 func New(bot bot.Bot) *TrtlShellPlugin {
@@ -30,10 +31,10 @@ func New(bot bot.Bot) *TrtlShellPlugin {
       files : map[string]string{},
     },
     activeSessions : map[string]*active{},
+		users : map[string]bool{},
 	}
 	return plugin
 }
-
 
 func (p *TrtlShellPlugin) Message(message msg.Message) bool {
   username := message.User.Name
@@ -55,9 +56,15 @@ func (p *TrtlShellPlugin) Message(message msg.Message) bool {
         response, listenToMe = p.changeDirectory(user, tokens)
       } else if tokens[0] == "ls" {
         response, listenToMe = p.listDirectory(user, tokens)
-      }else if tokens[0] == "mkdir" {
+      } else if tokens[0] == "mkdir" {
         response, listenToMe = p.makeDirectory(user, tokens)
-      }
+      } else if tokens[0] == "touch" {
+				response, listenToMe = p.touchFile(user, tokens)
+			} else if tokens[0] == "cat" {
+				response, listenToMe = p.catCommand(user, tokens)
+			} else if tokens[0] == "echo" {
+				response, listenToMe = p.echoCommand(user, tokens)
+			}
     }
   }
 
@@ -94,10 +101,15 @@ func (p *TrtlShellPlugin) initializeSession(username string, tokens []string) (s
     envVariables : map[string]string{},
     currentDirectory : p.createUserDirectoryIfNotPresent(username),
   }
+	p.users[username] = true
 	return fmt.Sprintf("%s is now logged in.", username), true
 }
 
 func (p *TrtlShellPlugin) terminateSession(user *active) (string, bool) {
   delete(p.activeSessions, user.name)
   return fmt.Sprintf("%s is now logged out.", user.name), true
+}
+
+func heckleTheUser(command string) (string, bool) {
+	return fmt.Sprintf("really? you don't know how to use %s", command), true
 }

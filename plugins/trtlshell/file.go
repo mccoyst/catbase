@@ -14,7 +14,6 @@ func (p *TrtlShellPlugin) getFileContents(user *active, filepath string) (string
 	}
 }
 
-
 func (p *TrtlShellPlugin) truncateAndWriteFile(user *active, filepath, contents string) (string, bool) {
 	currentDirectory, filename := p.getFileAndDirectory(user, filepath)
 	currentDirectory.files[filename] = contents

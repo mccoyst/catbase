@@ -3,10 +3,10 @@ package trtlshell
 import "strings"
 
 type directory struct {
-  name string
-  parent *directory
-  childDirectories map[string]*directory
-  files map[string]string
+	name             string
+	parent           *directory
+	childDirectories map[string]*directory
+	files            map[string]string
 }
 
 func (p *TrtlShellPlugin) getDirectoryAtPath(user *active, path string) *directory {
@@ -49,8 +49,8 @@ func (p *TrtlShellPlugin) getDirectoryAtPath(user *active, path string) *directo
 }
 
 func (p *TrtlShellPlugin) createUserDirectoryIfNotPresent(username string) *directory {
-  home := p.root.createChildDirectoryIfNotPresent("home")
-  return home.createChildDirectoryIfNotPresent(username)
+	home := p.root.createChildDirectoryIfNotPresent("home")
+	return home.createChildDirectoryIfNotPresent(username)
 }
 
 func (parent *directory) createChildDirectoryIfNotPresent(newDirectoryName string) *directory {
@@ -58,17 +58,17 @@ func (parent *directory) createChildDirectoryIfNotPresent(newDirectoryName strin
 		return nil
 	}
 
-  if existing, ok := parent.childDirectories[newDirectoryName]; ok {
-    //hmmm this could be an error but for now we'll ignore it
-    return existing
-  }
-  parent.childDirectories[newDirectoryName] = &directory {
-    name : newDirectoryName,
-    parent : parent,
-    childDirectories : map[string]*directory{},
-    files : map[string]string{},
-  }
-  return parent.childDirectories[newDirectoryName]
+	if existing, ok := parent.childDirectories[newDirectoryName]; ok {
+		//hmmm this could be an error but for now we'll ignore it
+		return existing
+	}
+	parent.childDirectories[newDirectoryName] = &directory{
+		name:             newDirectoryName,
+		parent:           parent,
+		childDirectories: map[string]*directory{},
+		files:            map[string]string{},
+	}
+	return parent.childDirectories[newDirectoryName]
 }
 
 func (dir *directory) getListing() string {

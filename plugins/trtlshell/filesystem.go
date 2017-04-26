@@ -9,26 +9,26 @@ import (
 	PWD
 */
 func (p *TrtlShellPlugin) getPresentWorkingDirectory(user *active) (string, bool) {
-  directories := []string{}
-  for currentDirectory := user.currentDirectory; currentDirectory != &p.root; currentDirectory = currentDirectory.parent {
-    directories = append(directories, currentDirectory.name)
-  }
+	directories := []string{}
+	for currentDirectory := user.currentDirectory; currentDirectory != &p.root; currentDirectory = currentDirectory.parent {
+		directories = append(directories, currentDirectory.name)
+	}
 
-	for i := 0 ; i < len(directories) / 2; i++ {
+	for i := 0; i < len(directories)/2; i++ {
 		swapWith := len(directories) - i - 1
 		directories[i], directories[swapWith] = directories[swapWith], directories[i]
 	}
 
-  return "/" + strings.Join(directories, "/"), true
+	return "/" + strings.Join(directories, "/"), true
 }
 
 /*
 	CD
 */
 func (p *TrtlShellPlugin) changeDirectory(user *active, tokens []string) (string, bool) {
-  if len(tokens) != 2 {
-    return heckleTheUser("cd")
-  }
+	if len(tokens) != 2 {
+		return heckleTheUser("cd")
+	}
 
 	currentDirectory := p.getDirectoryAtPath(user, tokens[1])
 
@@ -36,9 +36,9 @@ func (p *TrtlShellPlugin) changeDirectory(user *active, tokens []string) (string
 		return fmt.Sprintf("'%s' does not exist.", tokens[1]), true
 	}
 
-  user.currentDirectory = currentDirectory
+	user.currentDirectory = currentDirectory
 
-  return "", false
+	return "", false
 }
 
 /*
@@ -66,34 +66,34 @@ func (p *TrtlShellPlugin) listDirectory(user *active, tokens []string) (string, 
 	MKDIR
 */
 func (p *TrtlShellPlugin) makeDirectory(user *active, tokens []string) (string, bool) {
-  if len(tokens) != 2 {
-    return heckleTheUser("mkdir")
-  }
+	if len(tokens) != 2 {
+		return heckleTheUser("mkdir")
+	}
 
-  requestedDirectories := strings.Split(tokens[1], "/")
+	requestedDirectories := strings.Split(tokens[1], "/")
 
-  currentDirectory := user.currentDirectory
+	currentDirectory := user.currentDirectory
 	if tokens[1][0] == '/' {
 		currentDirectory = &p.root
 	}
 
-  for _, requestedDirectory := range requestedDirectories {
+	for _, requestedDirectory := range requestedDirectories {
 		if requestedDirectory == "" {
 			continue
 		}
 		currentDirectory = currentDirectory.createChildDirectoryIfNotPresent(requestedDirectory)
-  }
+	}
 
-  return "", false
+	return "", false
 }
 
 /*
 	TOUCH
 */
 func (p *TrtlShellPlugin) touchFile(user *active, tokens []string) (string, bool) {
-  if len(tokens) != 2 {
-    return heckleTheUser("touch")
-  }
+	if len(tokens) != 2 {
+		return heckleTheUser("touch")
+	}
 
 	requestedDirectories := strings.Split(tokens[1], "/")
 	currentDirectory := user.currentDirectory
@@ -119,7 +119,7 @@ func (p *TrtlShellPlugin) touchFile(user *active, tokens []string) (string, bool
 		currentDirectory.files[filename] = ""
 	}
 
-  return "", false
+	return "", false
 }
 
 func (p *TrtlShellPlugin) catCommand(user *active, tokens []string) (string, bool) {

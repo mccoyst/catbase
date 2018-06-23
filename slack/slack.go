@@ -4,6 +4,7 @@
 package slack
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -387,9 +388,30 @@ func slackTStoTime(t string) time.Time {
 	return time.Unix(sec, nsec)
 }
 
+func (s *Slack) ping(ctx context.Context) {
+	ticker := time.NewTicker(10 * time.Second)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			msg := map[string]interface{}{"type": "ping"}
+			if err := websocket.JSON.Send(s.ws, msg); err != nil {
+				return
+			}
+		}
+	}
+}
+
 func (s *Slack) Serve() error {
 	s.connect()
 	s.populateEmojiList()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	s.ping(ctx)
+
 	for {
 		msg, err := s.receiveMessage()
 		if err != nil && err == io.EOF {

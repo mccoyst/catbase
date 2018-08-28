@@ -27,6 +27,8 @@ const itemName = ":beer:"
 type BeersPlugin struct {
 	Bot bot.Bot
 	db  *sqlx.DB
+
+	chkRecheck map[int]bool
 }
 
 type untappdUser struct {
@@ -53,6 +55,7 @@ func New(bot bot.Bot) *BeersPlugin {
 	p := BeersPlugin{
 		Bot: bot,
 		db:  bot.DB(),
+		chkRecheck: make(map[int]bool),
 	}
 	p.LoadData()
 	for _, channel := range bot.Config().Untappd.Channels {
@@ -408,6 +411,11 @@ func (p *BeersPlugin) checkUntappd(channel string) {
 		if checkin.Checkin_comment != "" {
 			msg = fmt.Sprintf("%s -- %s",
 				msg, checkin.Checkin_comment)
+		}
+
+		if _, ok := p.chkRecheck[checkin.Checkin_id]; !ok && checkin.Media.Count == 0 {
+			p.chkRecheck[checkin.Checkin_id] = true
+			continue
 		}
 
 		if checkin.Media.Count > 0 {

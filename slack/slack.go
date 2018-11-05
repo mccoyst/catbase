@@ -17,8 +17,8 @@ import (
 	"strconv"
 	"strings"
 	// "sync/atomic"
-	"time"
 	"context"
+	"time"
 
 	"github.com/velour/catbase/bot"
 	"github.com/velour/catbase/bot/msg"
@@ -52,8 +52,11 @@ var idCounter uint64
 type slackUserInfoResp struct {
 	Ok   bool `json:"ok"`
 	User struct {
-		ID   string `json:"id"`
-		Name string `json:"name"`
+		ID      string `json:"id"`
+		Name    string `json:"name"`
+		Profile struct {
+			DisplayName string `json:"display_name"`
+		}
 	} `json:"user"`
 }
 
@@ -373,9 +376,9 @@ func (s *Slack) ping(ctx context.Context) {
 	defer ticker.Stop()
 	for {
 		select {
-			case <-ctx.Done():
+		case <-ctx.Done():
 			return
-			case <-ticker.C:
+		case <-ticker.C:
 			ping := map[string]interface{}{"type": "ping", "time": time.Now().UnixNano()}
 			if err := s.ws.Send(context.TODO(), ping); err != nil {
 				panic(err)
@@ -667,7 +670,7 @@ func (s *Slack) getUser(id string) (string, bool) {
 		log.Println("Error decoding response: ", err)
 		return "UNKNOWN", false
 	}
-	s.users[id] = userInfo.User.Name
+	s.users[id] = userInfo.User.Profile.DisplayName
 	return s.users[id], true
 }
 
